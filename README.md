@@ -1,4 +1,4 @@
-# g2pW
+# g2pW: Mandarin Grapheme-to-Phoneme Converter
 
 [![license](https://img.shields.io/badge/license-Apache%202.0-red)](https://github.com/GitYCC/g2pW/blob/master/LICENSE)
 
