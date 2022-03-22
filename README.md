@@ -67,7 +67,7 @@ $ bash cpp_dataset/download.sh
 $ python scripts/train_g2p_bert.py --config configs/config_cpp.py
 ```
 
-### Testing
+### Prediction
 
 ```
 $ python scripts/test_g2p_bert.py \
@@ -77,7 +77,7 @@ $ python scripts/test_g2p_bert.py \
 --output_path output_pred.txt
 ```
 
-### Prediction
+### Testing
 
 ```
 $ python scripts/predict_g2p_bert.py \
