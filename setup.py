@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='g2pw',
-    version='0.0.1',
+    version='0.0.4',
     license='Apache License 2.0',
     author='Yi-Chang Chen',
     author_email='ycc.tw.email@gmail.com',
@@ -10,6 +10,7 @@ setuptools.setup(
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     url='https://github.com/GitYCC/g2pW',
+    packages=setuptools.find_packages(),
     python_requires='>=3.6',
     include_package_data=True,
     classifiers=[
