@@ -52,6 +52,41 @@ $ pip install g2pw[opencc]
 [['ran2', 'er2', None, 'ta1', 'hong2', 'le5', None, None, 'nian2', 'yi3', 'hou4', None, 'ta1', 'jing4', 'tui4', 'chu1', 'le5', 'da4', 'jia1', 'de5', 'shi4', 'xian4', None]]
 ```
 
+## Scripts
+
+```
+$ git clone https://github.com/GitYCC/g2pW.git
+```
+
+### Train Model
+
+For example, we train models on CPP dataset as follows:
+
+```
+$ bash cpp_dataset/download.sh
+$ python scripts/train_g2p_bert.py --config configs/config_cpp.py
+```
+
+### Testing
+
+```
+$ python scripts/test_g2p_bert.py \
+--config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
+--checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
+--sent_path cpp_dataset/test.sent \
+--output_path output_pred.txt
+```
+
+### Prediction
+
+```
+$ python scripts/predict_g2p_bert.py \
+--config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
+--checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
+--sent_path cpp_dataset/test.sent \
+--lb_path cpp_dataset/test.lb
+```
+
 ## Citation
 
 ```
