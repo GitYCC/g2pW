@@ -14,13 +14,13 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 
 - Install [PyTorch](https://pytorch.org/get-started/locally/)
 
-- `pip install g2pw`
+- `$ pip install g2pw`
 
 
 
-### Quick Started
+### Quick Demo
 
-```
+```python
 >>> from g2pw import G2PWConverter
 >>> conv = G2PWConverter()
 >>> sentence = '上校請技術人員校正FN儀器'
@@ -32,6 +32,25 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 ```
 
 
+### Use GPU to Speed Up
+
+```python
+conv = G2PWConverter(use_cuda=True)
+```
+
+
+### Support Simplified Chinese and Pinyin
+
+```
+$ pip install g2pw[opencc]
+```
+
+```python
+>>> from g2pw import G2PWConverter
+>>> conv = G2PWConverter(style='pinyin', enable_non_tradional_chinese=True)
+>>> conv('然而，他红了20年以后，他竟退出了大家的视线。')
+[['ran2', 'er2', None, 'ta1', 'hong2', 'le5', None, None, 'nian2', 'yi3', 'hou4', None, 'ta1', 'jing4', 'tui4', 'chu1', 'le5', 'da4', 'jia1', 'de5', 'shi4', 'xian4', None]]
+```
 
 ## Citation
 
