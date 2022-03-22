@@ -20,6 +20,8 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 
 ### Quick Demo
 
+<a href="https://colab.research.google.com/github/GitYCC/g2pW/blob/master/misc/demo.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+
 ```python
 >>> from g2pw import G2PWConverter
 >>> conv = G2PWConverter()
@@ -30,7 +32,6 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 >>> conv(sentences)
 [['ㄧㄣ2', 'ㄏㄤ2'], ['ㄒㄧㄥ2', 'ㄉㄨㄥ4']]
 ```
-
 
 ### Use GPU to Speed Up
 
