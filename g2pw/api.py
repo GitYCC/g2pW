@@ -1,13 +1,15 @@
 import os
 import json
+import requests
+import zipfile
+from io import BytesIO
+import shutil
 
 import torch
 from torch.utils.data import DataLoader
 from transformers import BertTokenizer
-try:
-    from tqdm import tqdm
-except:
-    pass
+from tqdm import tqdm
+
 try:
     from opencc import OpenCC
 except:
@@ -16,6 +18,8 @@ except:
 from g2pw.module import G2PW
 from g2pw.dataset import prepare_data, TextDataset, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
+
+MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v1.zip'
 
 
 def predict(model, dataloader, device, labels, turnoff_tqdm=False):
@@ -45,10 +49,32 @@ def predict(model, dataloader, device, labels, turnoff_tqdm=False):
     return all_preds, all_confidences
 
 
+def download_model(model_dir):
+    os.makedirs(model_dir, exist_ok=True)
+
+    r = requests.get(MODEL_URL, allow_redirects=True)
+    zip_file = zipfile.ZipFile(BytesIO(r.content))
+
+    for member in zip_file.namelist():
+        filename = os.path.basename(member)
+        # skip directories
+        if not filename:
+            continue
+
+        # copy file (taken from zipfile's extract)
+        source = zip_file.open(member)
+        target = open(os.path.join(model_dir, filename), "wb")
+        with source, target:
+            shutil.copyfileobj(source, target)
+
+
 class G2PWConverter:
-    def __init__(self, model_dir, style='bopomofo', model_source=None, use_cuda=True, num_workers=None, batch_size=None,
-                 turnoff_tqdm=True, enable_non_tradional_chinese=True):
-        self.config = load_config(os.path.join(model_dir, 'config.py'))
+    def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, use_cuda=False, num_workers=None, batch_size=None,
+                 turnoff_tqdm=True, enable_non_tradional_chinese=False):
+        if not os.path.exists(os.path.join(model_dir, 'best_accuracy.pth')):
+            download_model(model_dir)
+
+        self.config = load_config(os.path.join(model_dir, 'config.py'), use_default=True)
 
         self.num_workers = num_workers if num_workers else self.config.num_workers
         self.batch_size = batch_size if batch_size else self.config.batch_size
@@ -97,7 +123,7 @@ class G2PWConverter:
                                'char_bopomofo_dict.json'), 'r') as fr:
             self.char_bopomofo_dict = json.load(fr)
 
-        if enable_opencc:
+        if self.enable_opencc:
             self.cc = OpenCC('s2tw')
 
     def _convert_bopomofo_to_pinyin(self, bopomofo):
@@ -114,7 +140,7 @@ class G2PWConverter:
         if isinstance(sentences, str):
             sentences = [sentences]
 
-        if enable_opencc:
+        if self.enable_opencc:
             translated_sentences = []
             for sent in sentences:
                 translated_sent = self.cc.convert(sent)
