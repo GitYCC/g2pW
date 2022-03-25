@@ -88,6 +88,10 @@ $ python scripts/predict_g2p_bert.py \
 --lb_path cpp_dataset/test.lb
 ```
 
+## Checkpoints
+
+[G2PWModel-v1.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v1.zip)
+
 ## Citation
 
 ```
