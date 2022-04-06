@@ -97,11 +97,13 @@ def evaluate(model, valid_loader, device):
     return metric
 
 
-def test(config, checkpoint, device, sent_path=None, lb_path=None):
+def test(config, checkpoint, device, sent_path=None, lb_path=None, pos_path=None):
     if sent_path is None:
         sent_path = config.test_sent_path
     if lb_path is None:
         lb_path = config.test_lb_path
+    if pos_path is None:
+        pos_path = config.param_pos['test_pos_path']
 
     tokenizer = BertTokenizer.from_pretrained(config.model_source)
 
@@ -110,7 +112,7 @@ def test(config, checkpoint, device, sent_path=None, lb_path=None):
     chars = sorted(list(char2phonemes.keys()))
 
     test_texts, test_query_ids, test_phonemes = prepare_data(sent_path, lb_path)
-    test_pos_tags = prepare_pos(config.param_pos['test_pos_path']) if config.use_pos else None
+    test_pos_tags = prepare_pos(pos_path) if config.use_pos else None
     test_dataset = TextDataset(tokenizer, labels, char2phonemes, chars, test_texts, test_query_ids, phonemes=test_phonemes, pos_tags=test_pos_tags,
                                use_mask=config.use_mask, use_char_phoneme=config.use_char_phoneme, use_pos=config.use_pos, window_size=config.window_size, for_train=True)
 
