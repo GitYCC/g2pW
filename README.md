@@ -39,6 +39,11 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 conv = G2PWConverter(use_cuda=True)
 ```
 
+### Load Offline Model
+
+```python
+conv = G2PWConverter(model_dir='./G2PWModel-v1/')
+```
 
 ### Support Simplified Chinese and Pinyin
 
