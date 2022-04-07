@@ -42,7 +42,7 @@ conv = G2PWConverter(use_cuda=True)
 ### Load Offline Model
 
 ```python
-conv = G2PWConverter(model_dir='./G2PWModel-v1/')
+conv = G2PWConverter(model_dir='./G2PWModel-v1/', model_source='./path-to/bert-base-chinese/')
 ```
 
 ### Support Simplified Chinese and Pinyin
