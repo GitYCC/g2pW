@@ -1,5 +1,6 @@
 numpy==1.21
 # torch==1.7.0
+onnxruntime==1.7.0
 tqdm==4.60.0
 transformers==3.4.0
 pandas==1.1.4

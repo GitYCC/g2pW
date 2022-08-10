@@ -9,6 +9,8 @@ import torch
 from torch.utils.data import DataLoader
 from transformers import BertTokenizer
 from tqdm import tqdm
+import onnxruntime
+import numpy as np
 
 try:
     from opencc import OpenCC
@@ -22,7 +24,7 @@ from g2pw.utils import load_config
 MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2.zip'
 
 
-def predict(model, dataloader, device, labels, turnoff_tqdm=False):
+def predict(model, dataloader, device, labels, save_onnx_path, turnoff_tqdm=False,export_onnx=False):
     model.eval()
 
     all_preds = []
@@ -41,10 +43,45 @@ def predict(model, dataloader, device, labels, turnoff_tqdm=False):
                 char_ids=char_ids,
                 position_ids=position_ids
             )
+            if export_onnx:
+                torch.onnx.export(model,
+                    (input_ids, token_type_ids,attention_mask,phoneme_mask, char_ids, position_ids),
+                    save_onnx_path,
+                    export_params=True,
+                    opset_version=12,
+                    do_constant_folding=True,
+                    input_names=['input_ids','token_type_ids' ,'attention_mask','phoneme_mask', 'char_ids', 'position_ids'],
+                    output_names=['probs'],
+                    dynamic_axes={'input_ids': [0,1], 'token_type_ids':[0,1], 'attention_mask':[0,1],'phoneme_mask':[0],'char_ids':[0],'position_ids':[0],
+                                    'probs': [0]}, 
+                    verbose=True)
 
             max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
             all_preds += [labels[pred] for pred in preds]
             all_confidences += max_probs
+
+    return all_preds, all_confidences
+
+def onnx_predict(onnx_session, dataloader, labels, turnoff_tqdm=False,export_onnx=False,inference_onnx=False):
+
+    all_preds = []
+    all_confidences = []
+    generator = dataloader if turnoff_tqdm else tqdm(dataloader, desc='predict')
+    for data in generator:
+        input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids = \
+            [data[name].to(torch.device('cpu')) for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
+
+        probs = onnx_session.run([],{"input_ids": input_ids.numpy(),
+                                "token_type_ids":token_type_ids.numpy(),
+                                "attention_mask":attention_mask.numpy(),
+                                "phoneme_mask":phoneme_mask.numpy(),
+                                "char_ids":char_ids.numpy(),
+                                "position_ids":position_ids.numpy()})[0]
+
+        probs = torch.from_numpy(np.array(probs))
+        max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
+        all_preds += [labels[pred] for pred in preds]
+        all_confidences += max_probs
 
     return all_preds, all_confidences
 
@@ -70,10 +107,19 @@ def download_model(model_dir):
 
 class G2PWConverter:
     def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, use_cuda=False, num_workers=None, batch_size=None,
-                 turnoff_tqdm=True, enable_non_tradional_chinese=False):
+                 turnoff_tqdm=True, enable_non_tradional_chinese=False,export_onnx=False,inference_onnx=False):
         if not os.path.exists(os.path.join(model_dir, 'best_accuracy.pth')):
             download_model(model_dir)
 
+        self.model_dir = model_dir
+        self.export_onnx = export_onnx
+        self.inference_onnx = inference_onnx
+        if self.inference_onnx:
+            sess_options = onnxruntime.SessionOptions()
+            sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+            sess_options.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
+            sess_options.intra_op_num_threads = 2
+            self.session_g2pW =  onnxruntime.InferenceSession(os.path.join(model_dir,'g2pW.onnx'),sess_options=sess_options)
         self.config = load_config(os.path.join(model_dir, 'config.py'), use_default=True)
 
         self.num_workers = num_workers if num_workers else self.config.num_workers
@@ -149,6 +195,9 @@ class G2PWConverter:
             sentences = translated_sentences
 
         texts, query_ids, sent_ids, partial_results = self._prepare_data(sentences)
+        if len(texts) == 0:
+            # sentences no polyphonic words
+            return partial_results
 
         dataset = TextDataset(self.tokenizer, self.labels, self.char2phonemes, self.chars, texts, query_ids,
                               use_mask=self.config.use_mask, use_char_phoneme=self.config.use_char_phoneme,
@@ -160,8 +209,10 @@ class G2PWConverter:
             collate_fn=dataset.create_mini_batch,
             num_workers=self.num_workers
         )
-
-        preds, confidences = predict(self.model, dataloader, self.device, self.labels, turnoff_tqdm=self.turnoff_tqdm)
+        if self.inference_onnx:
+            preds, confidences = onnx_predict(self.session_g2pW, dataloader, self.labels, turnoff_tqdm=self.turnoff_tqdm)
+        else:
+            preds, confidences = predict(self.model, dataloader, self.device, self.labels,save_onnx_path=os.path.join(self.model_dir,'g2pW.onnx'), turnoff_tqdm=self.turnoff_tqdm,export_onnx=self.export_onnx)
         if self.config.use_char_phoneme:
             preds = [pred.split(' ')[1] for pred in preds]
 
