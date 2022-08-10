@@ -197,3 +197,164 @@ class TextDataset(Dataset):
             batch_output['infos'] = infos
 
         return batch_output
+
+class TextData():
+    POS_TAGS = ['UNK', 'A', 'C', 'D', 'I', 'N', 'P', 'T', 'V', 'DE', 'SHI']
+
+    def __init__(self, tokenizer, labels, char2phonemes, chars, texts, query_ids, phonemes=None, pos_tags=None,
+                 use_mask=False, use_char_phoneme=False, use_pos=False, window_size=None, max_len=512, for_train=True):
+        self.tokenizer = tokenizer
+        self.max_len = max_len
+        self.window_size = window_size
+        self.for_train = for_train
+
+        self.labels = labels
+        self.char2phonemes = char2phonemes
+        self.chars = chars
+        self.texts = texts
+        self.query_ids = query_ids
+        self.phonemes = phonemes
+        self.pos_tags = pos_tags
+
+        self.use_mask = use_mask
+        self.use_char_phoneme = use_char_phoneme
+        self.use_pos = use_pos
+
+        if window_size is not None:
+            self.truncated_texts, self.truncated_query_ids = self._truncate_texts(self.window_size, texts, query_ids)
+
+    def _truncate_texts(self, window_size, texts, query_ids):
+        truncated_texts = []
+        truncated_query_ids = []
+        for text, query_id in zip(texts, query_ids):
+            start = max(0, query_id - window_size // 2)
+            end = min(len(text), query_id + window_size // 2)
+            truncated_text = text[start:end]
+            truncated_texts.append(truncated_text)
+
+            truncated_query_id = query_id - start
+            truncated_query_ids.append(truncated_query_id)
+        return truncated_texts, truncated_query_ids
+
+    def _truncate(self, max_len, text, query_id, tokens, text2token, token2text):
+        truncate_len = max_len - 2
+        if len(tokens) <= truncate_len:
+            return (text, query_id, tokens, text2token, token2text)
+
+        token_position = text2token[query_id]
+
+        token_start = token_position - truncate_len // 2
+        token_end = token_start + truncate_len
+        font_exceed_dist = -token_start
+        back_exceed_dist = token_end - len(tokens)
+        if font_exceed_dist > 0:
+            token_start += font_exceed_dist
+            token_end += font_exceed_dist
+        elif back_exceed_dist > 0:
+            token_start -= back_exceed_dist
+            token_end -= back_exceed_dist
+
+        start = token2text[token_start][0]
+        end = token2text[token_end - 1][1]
+
+        return (
+            text[start:end],
+            query_id - start,
+            tokens[token_start:token_end],
+            [i - token_start if i is not None else None for i in text2token[start:end]],
+            [(s - start, e - start) for s, e in token2text[token_start:token_end]]
+        )
+
+    def get_data(self):
+        if len(self.texts) == 0:
+            return None
+
+        text = (self.truncated_texts if self.window_size else self.texts)[0].lower()
+        
+        query_ids = (self.truncated_query_ids if self.window_size else self.query_ids)
+
+        try:
+            tokens, text2token, token2text = tokenize_and_map(self.tokenizer, text)
+        except Exception:
+            print(f'warning: text "{text}" is invalid')
+            return self[(1) % len(self)]
+
+        text, query_ids, tokens, text2token, token2text = self._truncate(self.max_len, text, query_ids, tokens, text2token, token2text)
+        processed_tokens = ['[CLS]'] + tokens + ['[SEP]']
+        input_ids = torch.tensor(self.tokenizer.convert_tokens_to_ids(processed_tokens))
+        input_ids = input_ids.unsqueeze(0)
+
+        phoneme_masks = []
+        char_ids = []
+        position_ids = []
+        pos_ids = []
+        for idx,query_id in enumerate(query_ids):
+            query_char = text[query_id]
+            phoneme_mask = [1 if i in self.char2phonemes[query_char] else 0 for i in range(len(self.labels))] \
+                if self.use_mask else [1] * len(self.labels)
+            char_id = self.chars.index(query_char)
+            position_id = text2token[query_id] + 1  # [CLS] token locate at first place
+            phoneme_masks.append(phoneme_mask)
+            char_ids.append(char_id)
+            position_ids.append(position_id)
+
+            if self.use_pos and self.pos_tags is not None:
+                pos_id = self.POS_TAGS.index(self.pos_tags[idx])
+                pos_ids.append(pos_id)
+
+        phoneme_masks = torch.tensor(phoneme_masks, dtype=torch.float)
+        char_ids = torch.tensor(char_ids, dtype=torch.long)
+        position_ids = torch.tensor(position_ids, dtype=torch.long)
+
+        batch_output = {
+            'input_ids': input_ids,
+            'token_type_ids': None,
+            'attention_mask': None,
+            'phoneme_mask': phoneme_masks,
+            'char_ids': char_ids,
+            'position_ids': position_ids
+        }
+
+        if self.use_pos and self.pos_tags is not None:
+            pos_ids = torch.tensor(pos_ids, dtype=torch.long)
+            batch_output['pos_ids'] = pos_ids
+
+        return batch_output
+
+    def __len__(self):
+        return len(self.texts)
+
+    def create_mini_batch(self, samples):
+
+        def _agg(name):
+            return [sample[name] for sample in samples]
+
+        # zero pad 到同一序列長度
+        input_ids = pad_sequence(_agg('input_ids'), batch_first=True)
+        token_type_ids = pad_sequence(_agg('token_type_ids'), batch_first=True)
+        attention_mask = pad_sequence(_agg('attention_mask'), batch_first=True)
+        phoneme_mask = torch.tensor(_agg('phoneme_mask'), dtype=torch.float)
+        char_ids = torch.tensor(_agg('char_id'), dtype=torch.long)
+        position_ids = torch.tensor(_agg('position_id'), dtype=torch.long)
+
+        batch_output = {
+            'input_ids': input_ids,
+            'token_type_ids': token_type_ids,
+            'attention_mask': attention_mask,
+            'phoneme_mask': phoneme_mask,
+            'char_ids': char_ids,
+            'position_ids': position_ids
+        }
+
+        if self.use_pos and self.pos_tags is not None:
+            pos_ids = torch.tensor(_agg('pos_id'), dtype=torch.long)
+            batch_output['pos_ids'] = pos_ids
+
+        if self.for_train:
+            label_ids = torch.tensor(_agg('label_id'), dtype=torch.long)
+            batch_output['label_ids'] = label_ids
+        else:
+            infos = _agg('info')
+            batch_output['infos'] = infos
+
+        return batch_output

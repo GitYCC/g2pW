@@ -131,21 +131,14 @@ class G2PW(BertPreTrainedModel):
         scaling = (1 + self.param_focal['alpha'] - avg_phoneme_p_t) ** self.param_focal['gamma']
         return scaling
 
-    def forward(self, input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids, pos_ids=None, label_ids=None, eps=1e-6):
-        transformers_major_ver = int(transformers.__version__.split('.')[0])
-        if transformers_major_ver >= 4:
-            sequence_output, pooled_output = self.bert(
-                input_ids,
-                token_type_ids=token_type_ids,
-                attention_mask=attention_mask,
-                return_dict=False
-            )
-        else:
-            sequence_output, pooled_output = self.bert(
-                input_ids,
-                token_type_ids=token_type_ids,
-                attention_mask=attention_mask
-            )
+    def forward(self, input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids, pos_ids=None, label_ids=None, eps=1e-6):       
+        input_ids = input_ids[0].unsqueeze(0)
+        sequence_output, pooled_output = self.bert(
+            input_ids,
+            # token_type_ids=token_type_ids,
+            # attention_mask=attention_mask,
+            return_dict=False
+        )
 
         batch_size = input_ids.size(0)
         orig_selected_hidden = sequence_output[torch.arange(batch_size), position_ids]

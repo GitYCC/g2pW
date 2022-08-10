@@ -16,37 +16,10 @@ except:
     pass
 
 from g2pw.module import G2PW
-from g2pw.dataset import prepare_data, TextDataset, get_phoneme_labels, get_char_phoneme_labels
+from g2pw.dataset import prepare_data, TextDataset, TextData, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
 
 MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2.zip'
-
-
-def predict(model, dataloader, device, labels, turnoff_tqdm=False):
-    model.eval()
-
-    all_preds = []
-    all_confidences = []
-    with torch.no_grad():
-        generator = dataloader if turnoff_tqdm else tqdm(dataloader, desc='predict')
-        for data in generator:
-            input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids = \
-                [data[name].to(device) for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
-
-            probs = model(
-                input_ids=input_ids,
-                token_type_ids=token_type_ids,
-                attention_mask=attention_mask,
-                phoneme_mask=phoneme_mask,
-                char_ids=char_ids,
-                position_ids=position_ids
-            )
-
-            max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
-            all_preds += [labels[pred] for pred in preds]
-            all_confidences += max_probs
-
-    return all_preds, all_confidences
 
 
 def download_model(model_dir):
@@ -70,7 +43,7 @@ def download_model(model_dir):
 
 class G2PWConverter:
     def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, use_cuda=False, num_workers=None, batch_size=None,
-                 turnoff_tqdm=True, enable_non_tradional_chinese=False):
+                 turnoff_tqdm=True, enable_non_tradional_chinese=False,use_g2pw_once=False):
         if not os.path.exists(os.path.join(model_dir, 'best_accuracy.pth')):
             download_model(model_dir)
 
@@ -81,6 +54,7 @@ class G2PWConverter:
         self.model_source = model_source if model_source else self.config.model_source
         self.turnoff_tqdm = turnoff_tqdm
         self.enable_opencc = enable_non_tradional_chinese
+        self.use_g2pw_once = use_g2pw_once
 
         self.device = torch.device('cuda' if use_cuda else 'cpu')
 
@@ -126,6 +100,50 @@ class G2PWConverter:
         if self.enable_opencc:
             self.cc = OpenCC('s2tw')
 
+    def predict(self, dataloader):
+        all_preds = []
+        all_confidences = []
+        if dataloader == None and self.use_g2pw_once:
+            return all_preds, all_confidences
+
+        with torch.no_grad():
+            if self.use_g2pw_once:
+                input_ids, phoneme_mask, char_ids, position_ids = \
+                    [dataloader[name].to(self.device) for name in ('input_ids', 'phoneme_mask', 'char_ids', 'position_ids')]
+                token_type_ids, attention_mask = None, None 
+                probs = self.model(
+                    input_ids=input_ids,
+                    token_type_ids=token_type_ids,
+                    attention_mask=attention_mask,
+                    phoneme_mask=phoneme_mask,
+                    char_ids=char_ids,
+                    position_ids=position_ids
+                )
+
+                max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
+                all_preds += [self.labels[pred] for pred in preds]
+                all_confidences += max_probs
+            else:
+                generator = dataloader if self.turnoff_tqdm else tqdm(dataloader, desc='predict')
+                for data in generator:
+                    input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids = \
+                        [data[name].to(self.device) for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
+                 
+                    probs = self.model(
+                        input_ids=input_ids,
+                        token_type_ids=token_type_ids,
+                        attention_mask=attention_mask,
+                        phoneme_mask=phoneme_mask,
+                        char_ids=char_ids,
+                        position_ids=position_ids
+                    )
+
+                    max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
+                    all_preds += [self.labels[pred] for pred in preds]
+                    all_confidences += max_probs
+
+        return all_preds, all_confidences
+
     def _convert_bopomofo_to_pinyin(self, bopomofo):
         tone = bopomofo[-1]
         assert tone in '12345'
@@ -133,8 +151,7 @@ class G2PWConverter:
         if component:
             return component + tone
         else:
-            print(f'Warning: "{bopomofo}" cannot convert to pinyin')
-            return None
+            return bopomofo
 
     def __call__(self, sentences):
         if isinstance(sentences, str):
@@ -147,21 +164,29 @@ class G2PWConverter:
                 assert len(translated_sent) == len(sent)
                 translated_sentences.append(translated_sent)
             sentences = translated_sentences
-
         texts, query_ids, sent_ids, partial_results = self._prepare_data(sentences)
 
-        dataset = TextDataset(self.tokenizer, self.labels, self.char2phonemes, self.chars, texts, query_ids,
+        self.config.window_size = None
+        if self.use_g2pw_once:
+            td = TextData(self.tokenizer, self.labels, self.char2phonemes, self.chars, texts, query_ids,
                               use_mask=self.config.use_mask, use_char_phoneme=self.config.use_char_phoneme,
                               window_size=self.config.window_size, for_train=False)
+            dataloader = td.get_data()
+        else:
+            dataset = TextDataset(self.tokenizer, self.labels, self.char2phonemes, self.chars, texts, query_ids,
+                                use_mask=self.config.use_mask, use_char_phoneme=self.config.use_char_phoneme,
+                                window_size=self.config.window_size, for_train=False)
 
-        dataloader = DataLoader(
-            dataset=dataset,
-            batch_size=self.batch_size,
-            collate_fn=dataset.create_mini_batch,
-            num_workers=self.num_workers
-        )
+            dataloader = DataLoader(
+                dataset=dataset,
+                batch_size=self.batch_size,
+                collate_fn=dataset.create_mini_batch,
+                num_workers=self.num_workers
+            )
 
-        preds, confidences = predict(self.model, dataloader, self.device, self.labels, turnoff_tqdm=self.turnoff_tqdm)
+        with torch.no_grad():
+            preds, confidences = self.predict(dataloader)
+
         if self.config.use_char_phoneme:
             preds = [pred.split(' ')[1] for pred in preds]
 
