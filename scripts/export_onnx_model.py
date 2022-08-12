@@ -1,4 +1,6 @@
 import os
+import sys
+sys.path.insert(0, './')
 from g2pw import G2PWConverter
 
 def ConvertOnnxModel(sentence):
@@ -9,5 +11,5 @@ def ConvertOnnxModel(sentence):
 
 if __name__ == "__main__":
     # sentence must have polyphonic words
-    sentence = "数数"
+    sentence = "数数。"
     ConvertOnnxModel(sentence)
