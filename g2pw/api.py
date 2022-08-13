@@ -5,7 +5,6 @@ import zipfile
 from io import BytesIO
 import shutil
 
-import torch
 from torch.utils.data import DataLoader
 from transformers import BertTokenizer
 from tqdm import tqdm
@@ -21,67 +20,35 @@ from g2pw.module import G2PW
 from g2pw.dataset import prepare_data, TextDataset, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
 
-MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2.zip'
+MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v3.zip'
 
 
-def predict(model, dataloader, device, labels, save_onnx_path, turnoff_tqdm=False,export_onnx=False):
-    model.eval()
-
+def predict(onnx_session, dataloader, labels, turnoff_tqdm=False):
     all_preds = []
     all_confidences = []
-    with torch.no_grad():
-        generator = dataloader if turnoff_tqdm else tqdm(dataloader, desc='predict')
-        for data in generator:
-            input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids = \
-                [data[name].to(device) for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
 
-            probs = model(
-                input_ids=input_ids,
-                token_type_ids=token_type_ids,
-                attention_mask=attention_mask,
-                phoneme_mask=phoneme_mask,
-                char_ids=char_ids,
-                position_ids=position_ids
-            )
-            if export_onnx:
-                torch.onnx.export(model,
-                    (input_ids, token_type_ids,attention_mask,phoneme_mask, char_ids, position_ids),
-                    save_onnx_path,
-                    export_params=True,
-                    opset_version=12,
-                    do_constant_folding=True,
-                    input_names=['input_ids','token_type_ids' ,'attention_mask','phoneme_mask', 'char_ids', 'position_ids'],
-                    output_names=['probs'],
-                    dynamic_axes={'input_ids': [0,1], 'token_type_ids':[0,1], 'attention_mask':[0,1],'phoneme_mask':[0],'char_ids':[0],'position_ids':[0],
-                                    'probs': [0]}, 
-                    verbose=True)
-
-            max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
-            all_preds += [labels[pred] for pred in preds]
-            all_confidences += max_probs
-
-    return all_preds, all_confidences
-
-def onnx_predict(onnx_session, dataloader, labels, turnoff_tqdm=False,export_onnx=False,inference_onnx=False):
-
-    all_preds = []
-    all_confidences = []
     generator = dataloader if turnoff_tqdm else tqdm(dataloader, desc='predict')
     for data in generator:
         input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids = \
-            [data[name].to(torch.device('cpu')) for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
+            [data[name] for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
 
-        probs = onnx_session.run([],{"input_ids": input_ids.numpy(),
-                                "token_type_ids":token_type_ids.numpy(),
-                                "attention_mask":attention_mask.numpy(),
-                                "phoneme_mask":phoneme_mask.numpy(),
-                                "char_ids":char_ids.numpy(),
-                                "position_ids":position_ids.numpy()})[0]
+        probs = onnx_session.run(
+            [],
+            {
+                'input_ids': input_ids.numpy(),
+                'token_type_ids': token_type_ids.numpy(),
+                'attention_mask': attention_mask.numpy(),
+                'phoneme_mask': phoneme_mask.numpy(),
+                'char_ids': char_ids.numpy(),
+                'position_ids': position_ids.numpy()
+            }
+        )[0]
 
-        probs = torch.from_numpy(np.array(probs))
-        max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
-        all_preds += [labels[pred] for pred in preds]
-        all_confidences += max_probs
+        preds = np.argmax(probs, axis=-1)
+        max_probs = probs[np.arange(probs.shape[0]), preds]
+
+        all_preds += [labels[pred] for pred in preds.tolist()]
+        all_confidences += max_probs.tolist()
 
     return all_preds, all_confidences
 
@@ -106,20 +73,17 @@ def download_model(model_dir):
 
 
 class G2PWConverter:
-    def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, use_cuda=False, num_workers=None, batch_size=None,
-                 turnoff_tqdm=True, enable_non_tradional_chinese=False,export_onnx=False,inference_onnx=False):
-        if not os.path.exists(os.path.join(model_dir, 'best_accuracy.pth')):
+    def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, num_workers=None, batch_size=None,
+                 turnoff_tqdm=True, enable_non_tradional_chinese=False):
+        if not os.path.exists(os.path.join(model_dir, 'g2pw.onnx')):
             download_model(model_dir)
 
-        self.model_dir = model_dir
-        self.export_onnx = export_onnx
-        self.inference_onnx = inference_onnx
-        if self.inference_onnx:
-            sess_options = onnxruntime.SessionOptions()
-            sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
-            sess_options.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
-            sess_options.intra_op_num_threads = 2
-            self.session_g2pW =  onnxruntime.InferenceSession(os.path.join(model_dir,'g2pW.onnx'),sess_options=sess_options)
+        sess_options = onnxruntime.SessionOptions()
+        sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+        sess_options.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.intra_op_num_threads = 2
+        self.session_g2pw =  onnxruntime.InferenceSession(os.path.join(model_dir, 'g2pw.onnx'), sess_options=sess_options)
+        
         self.config = load_config(os.path.join(model_dir, 'config.py'), use_default=True)
 
         self.num_workers = num_workers if num_workers else self.config.num_workers
@@ -127,8 +91,6 @@ class G2PWConverter:
         self.model_source = model_source if model_source else self.config.model_source
         self.turnoff_tqdm = turnoff_tqdm
         self.enable_opencc = enable_non_tradional_chinese
-
-        self.device = torch.device('cuda' if use_cuda else 'cpu')
 
         self.tokenizer = BertTokenizer.from_pretrained(self.config.model_source)
 
@@ -140,22 +102,6 @@ class G2PWConverter:
 
         self.chars = sorted(list(self.char2phonemes.keys()))
         self.pos_tags = TextDataset.POS_TAGS
-
-        self.model = G2PW.from_pretrained(
-            self.model_source,
-            labels=self.labels,
-            chars=self.chars,
-            pos_tags=self.pos_tags,
-            use_conditional=self.config.use_conditional,
-            param_conditional=self.config.param_conditional,
-            use_focal=self.config.use_focal,
-            param_focal=self.config.param_focal,
-            use_pos=self.config.use_pos,
-            param_pos=self.config.param_pos
-        )
-        checkpoint = os.path.join(model_dir, 'best_accuracy.pth')
-        self.model.load_state_dict(torch.load(checkpoint, map_location=self.device))
-        self.model.to(self.device)
 
         with open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                'bopomofo_to_pinyin_wo_tune_dict.json'), 'r') as fr:
@@ -209,10 +155,9 @@ class G2PWConverter:
             collate_fn=dataset.create_mini_batch,
             num_workers=self.num_workers
         )
-        if self.inference_onnx:
-            preds, confidences = onnx_predict(self.session_g2pW, dataloader, self.labels, turnoff_tqdm=self.turnoff_tqdm)
-        else:
-            preds, confidences = predict(self.model, dataloader, self.device, self.labels,save_onnx_path=os.path.join(self.model_dir,'g2pW.onnx'), turnoff_tqdm=self.turnoff_tqdm,export_onnx=self.export_onnx)
+
+        preds, confidences = predict(self.session_g2pw, dataloader, self.labels, turnoff_tqdm=self.turnoff_tqdm)
+
         if self.config.use_char_phoneme:
             preds = [pred.split(' ')[1] for pred in preds]
 
