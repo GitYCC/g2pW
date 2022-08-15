@@ -16,8 +16,6 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 
 - `$ pip install g2pw`
 
-
-
 ### Quick Demo
 
 <a href="https://colab.research.google.com/github/GitYCC/g2pW/blob/master/misc/demo.ipynb" target="_blank"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
@@ -33,23 +31,13 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 [['ㄧㄣ2', 'ㄏㄤ2'], ['ㄒㄧㄥ2', 'ㄉㄨㄥ4']]
 ```
 
-### Use GPU to Speed Up
-
-```python
-conv = G2PWConverter(use_cuda=True)
-```
-
 ### Load Offline Model
 
 ```python
-conv = G2PWConverter(model_dir='./G2PWModel-v1/', model_source='./path-to/bert-base-chinese/')
+conv = G2PWConverter(model_dir='./G2PWModel-v3/', model_source='./path-to/bert-base-chinese/')
 ```
 
 ### Support Simplified Chinese and Pinyin
-
-```
-$ pip install g2pw[opencc]
-```
 
 ```python
 >>> from g2pw import G2PWConverter
@@ -77,25 +65,25 @@ $ python scripts/train_g2p_bert.py --config configs/config_cpp.py
 
 ```
 $ python scripts/test_g2p_bert.py \
---config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
---checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
---sent_path cpp_dataset/test.sent \
---output_path output_pred.txt
+    --config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
+    --checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
+    --sent_path cpp_dataset/test.sent \
+    --output_path output_pred.txt
 ```
 
 ### Testing
 
 ```
 $ python scripts/predict_g2p_bert.py \
---config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
---checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
---sent_path cpp_dataset/test.sent \
---lb_path cpp_dataset/test.lb
+    --config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
+    --checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
+    --sent_path cpp_dataset/test.sent \
+    --lb_path cpp_dataset/test.lb
 ```
 
 ## Checkpoints
 
-[G2PWModel-v1.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v1.zip)
+[G2PWModel-v3.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v3.zip)
 
 ## Citation
 

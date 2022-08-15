@@ -11,11 +11,6 @@ from tqdm import tqdm
 import onnxruntime
 import numpy as np
 
-try:
-    from opencc import OpenCC
-except:
-    pass
-
 from g2pw.module import G2PW
 from g2pw.dataset import prepare_data, TextDataset, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
@@ -90,7 +85,6 @@ class G2PWConverter:
         self.batch_size = batch_size if batch_size else self.config.batch_size
         self.model_source = model_source if model_source else self.config.model_source
         self.turnoff_tqdm = turnoff_tqdm
-        self.enable_opencc = enable_non_tradional_chinese
 
         self.tokenizer = BertTokenizer.from_pretrained(self.config.model_source)
 
@@ -115,8 +109,13 @@ class G2PWConverter:
                                'char_bopomofo_dict.json'), 'r') as fr:
             self.char_bopomofo_dict = json.load(fr)
 
-        if self.enable_opencc:
-            self.cc = OpenCC('s2tw')
+        self.enable_non_tradional_chinese = enable_non_tradional_chinese
+        if self.enable_non_tradional_chinese:
+            self.s2t_dict = {}
+            for line in open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                    'bert-base-chinese_s2t_dict.txt'), 'r').read().strip().split('\n'):
+                s_char, t_char = line.split('\t')
+                self.s2t_dict[s_char] = t_char
 
     def _convert_bopomofo_to_pinyin(self, bopomofo):
         tone = bopomofo[-1]
@@ -128,14 +127,17 @@ class G2PWConverter:
             print(f'Warning: "{bopomofo}" cannot convert to pinyin')
             return None
 
+    def _convert_s2t(self, sentence):
+        return ''.join([self.s2t_dict.get(char, char) for char in sentence])
+
     def __call__(self, sentences):
         if isinstance(sentences, str):
             sentences = [sentences]
 
-        if self.enable_opencc:
+        if self.enable_non_tradional_chinese:
             translated_sentences = []
             for sent in sentences:
-                translated_sent = self.cc.convert(sent)
+                translated_sent = self._convert_s2t(sent)
                 assert len(translated_sent) == len(sent)
                 translated_sentences.append(translated_sent)
             sentences = translated_sentences

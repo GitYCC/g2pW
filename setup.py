@@ -29,6 +29,5 @@ setuptools.setup(
         'transformers'
     ],
     extras_require={
-        'opencc': ['opencc-python-reimplemented'],
     }
 )
