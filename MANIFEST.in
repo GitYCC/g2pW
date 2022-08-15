@@ -1,2 +1,3 @@
 include g2pw/bopomofo_to_pinyin_wo_tune_dict.json
 include g2pw/char_bopomofo_dict.json
+include g2pw/bert-base-chinese_s2t_dict.txt
