@@ -15,7 +15,7 @@ from g2pw.module import G2PW
 from g2pw.dataset import prepare_data, TextDataset, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
 
-MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v3.zip'
+MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2-onnx.zip'
 
 
 def predict(onnx_session, dataloader, labels, turnoff_tqdm=False):
@@ -49,28 +49,19 @@ def predict(onnx_session, dataloader, labels, turnoff_tqdm=False):
 
 
 def download_model(model_dir):
-    os.makedirs(model_dir, exist_ok=True)
+    root = os.path.dirname(os.path.abspath(model_dir))
 
     r = requests.get(MODEL_URL, allow_redirects=True)
     zip_file = zipfile.ZipFile(BytesIO(r.content))
-
-    for member in zip_file.namelist():
-        filename = os.path.basename(member)
-        # skip directories
-        if not filename:
-            continue
-
-        # copy file (taken from zipfile's extract)
-        source = zip_file.open(member)
-        target = open(os.path.join(model_dir, filename), "wb")
-        with source, target:
-            shutil.copyfileobj(source, target)
+    zip_file.extractall(root)
+    source_dir = os.path.join(root, zip_file.namelist()[0].split('/')[0])
+    shutil.move(source_dir, model_dir)
 
 
 class G2PWConverter:
     def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, num_workers=None, batch_size=None,
                  turnoff_tqdm=True, enable_non_tradional_chinese=False):
-        if not os.path.exists(os.path.join(model_dir, 'g2pw.onnx')):
+        if not os.path.exists(os.path.join(model_dir, 'version')):
             download_model(model_dir)
 
         sess_options = onnxruntime.SessionOptions()
