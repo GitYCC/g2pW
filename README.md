@@ -1,6 +1,6 @@
 # g2pW: Mandarin Grapheme-to-Phoneme Converter
 
-[![Downloads](https://pepy.tech/badge/g2pw)](https://pepy.tech/project/g2pw)[![license](https://img.shields.io/badge/license-Apache%202.0-red)](https://github.com/GitYCC/g2pW/blob/master/LICENSE)
+[![Downloads](https://pepy.tech/badge/g2pw)](https://pepy.tech/project/g2pw)  [![license](https://img.shields.io/badge/license-Apache%202.0-red)](https://github.com/GitYCC/g2pW/blob/master/LICENSE)
 
 **Authors:** [Yi-Chang Chen](https://github.com/GitYCC), Yu-Chuan Chang, Yen-Cheng Chang and Yi-Ren Yeh
 
