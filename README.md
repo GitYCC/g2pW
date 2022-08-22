@@ -6,6 +6,10 @@
 
 This is the official repository of our paper [g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin](https://arxiv.org/abs/2203.10430) (**INTERSPEECH 2022**).
 
+## News
+
+- g2pW is included in [PaddlePaddle](https://github.com/PaddlePaddle)/[PaddleSpeech](https://github.com/PaddlePaddle/PaddleSpeech)
+
 ## Getting Started
 
 ### Dependency / Install
@@ -83,7 +87,8 @@ $ python scripts/predict_g2p_bert.py \
 
 ## Checkpoints
 
-[G2PWModel-v3.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v3.zip)
+- [G2PWModel-v2.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2.zip)
+- [G2PWModel-v2-onnx.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2-onnx.zip)
 
 ## Citation
 
