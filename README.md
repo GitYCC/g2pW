@@ -9,6 +9,8 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 ## News
 
 - g2pW is included in [PaddlePaddle](https://github.com/PaddlePaddle)/[PaddleSpeech](https://github.com/PaddlePaddle/PaddleSpeech)
+- g2pW is included in [mozillazg](https://github.com/mozillazg)/[pypinyin-g2pW](https://github.com/mozillazg/pypinyin-g2pW)
+
 
 ## Getting Started
 
