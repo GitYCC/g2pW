@@ -38,7 +38,7 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 ### Load Offline Model
 
 ```python
-conv = G2PWConverter(model_dir='./G2PWModel-v3/', model_source='./path-to/bert-base-chinese/')
+conv = G2PWConverter(model_dir='./G2PWModel-v2-onnx/', model_source='./path-to/bert-base-chinese/')
 ```
 
 ### Support Simplified Chinese and Pinyin
