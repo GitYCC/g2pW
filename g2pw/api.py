@@ -76,7 +76,7 @@ class G2PWConverter:
         self.model_source = model_source if model_source else self.config.model_source
         self.turnoff_tqdm = turnoff_tqdm
 
-        self.tokenizer = BertTokenizer.from_pretrained(self.config.model_source)
+        self.tokenizer = BertTokenizer.from_pretrained(self.model_source)
 
         polyphonic_chars_path = os.path.join(model_dir, 'POLYPHONIC_CHARS.txt')
         monophonic_chars_path = os.path.join(model_dir, 'MONOPHONIC_CHARS.txt')
