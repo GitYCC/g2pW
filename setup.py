@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name='g2pw',
-    version='0.0.6',
+    version='0.0.7',
     license='Apache License 2.0',
     author='Yi-Chang Chen',
     author_email='ycc.tw.email@gmail.com',
