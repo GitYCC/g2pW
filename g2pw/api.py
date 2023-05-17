@@ -71,7 +71,7 @@ class G2PWConverter:
         
         self.config = load_config(os.path.join(model_dir, 'config.py'), use_default=True)
 
-        self.num_workers = num_workers if num_workers else self.config.num_workers
+        self.num_workers = num_workers if num_workers is not None else self.config.num_workers
         self.batch_size = batch_size if batch_size else self.config.batch_size
         self.model_source = model_source if model_source else self.config.model_source
         self.turnoff_tqdm = turnoff_tqdm
