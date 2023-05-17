@@ -1,16 +1,10 @@
 # g2pW: Mandarin Grapheme-to-Phoneme Converter
 
-[![Downloads](https://pepy.tech/badge/g2pw)](https://pepy.tech/project/g2pw)  [![license](https://img.shields.io/badge/license-Apache%202.0-red)](https://github.com/GitYCC/g2pW/blob/master/LICENSE)
+[![Downloads](https://pepy.tech/badge/g2pw)](https://pepy.tech/project/g2pw)[![license](https://img.shields.io/badge/license-Apache%202.0-red)](https://github.com/GitYCC/g2pW/blob/master/LICENSE)
 
 **Authors:** [Yi-Chang Chen](https://github.com/GitYCC), Yu-Chuan Chang, Yen-Cheng Chang and Yi-Ren Yeh
 
-This is the official repository of our paper [g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin](https://arxiv.org/abs/2203.10430) (**INTERSPEECH 2022**).
-
-## News
-
-- g2pW is included in [PaddlePaddle](https://github.com/PaddlePaddle)/[PaddleSpeech](https://github.com/PaddlePaddle/PaddleSpeech)
-- g2pW is included in [mozillazg](https://github.com/mozillazg)/[pypinyin-g2pW](https://github.com/mozillazg/pypinyin-g2pW)
-
+This is the official repository of our paper [g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin](https://arxiv.org/abs/2203.10430).
 
 ## Getting Started
 
@@ -21,6 +15,8 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 - Install [PyTorch](https://pytorch.org/get-started/locally/)
 
 - `$ pip install g2pw`
+
+
 
 ### Quick Demo
 
@@ -37,13 +33,23 @@ This is the official repository of our paper [g2pW: A Conditional Weighted Softm
 [['ㄧㄣ2', 'ㄏㄤ2'], ['ㄒㄧㄥ2', 'ㄉㄨㄥ4']]
 ```
 
+### Use GPU to Speed Up
+
+```python
+conv = G2PWConverter(use_cuda=True)
+```
+
 ### Load Offline Model
 
 ```python
-conv = G2PWConverter(model_dir='./G2PWModel-v2-onnx/', model_source='./path-to/bert-base-chinese/')
+conv = G2PWConverter(model_dir='./G2PWModel-v1/')
 ```
 
 ### Support Simplified Chinese and Pinyin
+
+```
+$ pip install g2pw[opencc]
+```
 
 ```python
 >>> from g2pw import G2PWConverter
@@ -71,36 +77,35 @@ $ python scripts/train_g2p_bert.py --config configs/config_cpp.py
 
 ```
 $ python scripts/test_g2p_bert.py \
-    --config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
-    --checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
-    --sent_path cpp_dataset/test.sent \
-    --output_path output_pred.txt
+--config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
+--checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
+--sent_path cpp_dataset/test.sent \
+--output_path output_pred.txt
 ```
 
 ### Testing
 
 ```
 $ python scripts/predict_g2p_bert.py \
-    --config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
-    --checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
-    --sent_path cpp_dataset/test.sent \
-    --lb_path cpp_dataset/test.lb
+--config saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/config.py \
+--checkpoint saved_models/CPP_BERT_M_DescWS-Sec-cLin-B_POSw01/best_accuracy.pth \
+--sent_path cpp_dataset/test.sent \
+--lb_path cpp_dataset/test.lb
 ```
 
 ## Checkpoints
 
-- [G2PWModel-v2.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2.zip)
-- [G2PWModel-v2-onnx.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2-onnx.zip)
+[G2PWModel-v1.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v1.zip)
 
 ## Citation
 
-To cite the code/data/paper, please use this BibTex
-```bibtex
-@article{chen2022g2pw,
-    author={Yi-Chang Chen and Yu-Chuan Chang and Yen-Cheng Chang and Yi-Ren Yeh},
-    title = {g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin},
-    journal={Proc. Interspeech 2022},
-    url = {https://arxiv.org/abs/2203.10430},
-    year = {2022}
+```
+@misc{chen2022g2pw,
+      title={g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin}, 
+      author={Yi-Chang Chen and Yu-Chuan Chang and Yen-Cheng Chang and Yi-Ren Yeh},
+      year={2022},
+      eprint={2203.10430},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
 }
 ```

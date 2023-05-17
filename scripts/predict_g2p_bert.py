@@ -53,7 +53,6 @@ def main(config, checkpoint, sent_path, output_path=None):
     )
     model.load_state_dict(torch.load(checkpoint, map_location=device))
     model.to(device)
-    model.eval()
 
     preds, confidences = predict(model, dataloader, device, labels)
     if config.use_char_phoneme:
