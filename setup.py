@@ -7,7 +7,7 @@ setuptools.setup(
     author='Yi-Chang Chen',
     author_email='ycc.tw.email@gmail.com',
     description='g2pW',
-    long_description=open('README.md').read(),
+    long_description=open('README.md').read("utf-8"),
     long_description_content_type='text/markdown',
     url='https://github.com/GitYCC/g2pW',
     packages=setuptools.find_packages(),
