@@ -96,12 +96,14 @@ $ python scripts/predict_g2p_bert.py \
 
 To cite the code/data/paper, please use this BibTex
 ```bibtex
-@article{chen2022g2pw,
-    author={Yi-Chang Chen and Yu-Chuan Chang and Yen-Cheng Chang and Yi-Ren Yeh},
-    title = {g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin},
-    journal={Proc. Interspeech 2022},
-    url = {https://arxiv.org/abs/2203.10430},
-    year = {2022}
+@inproceedings{chen22d_interspeech,
+  title     = {g2pW: A Conditional Weighted Softmax BERT for Polyphone Disambiguation in Mandarin},
+  author    = {Yi-Chang Chen and Yu-Chuan Steven and Yen-Cheng Chang and Yi-Ren Yeh},
+  year      = {2022},
+  booktitle = {Interspeech 2022},
+  pages     = {1926--1930},
+  doi       = {10.21437/Interspeech.2022-216},
+  issn      = {2958-1796},
 }
 ```
 
