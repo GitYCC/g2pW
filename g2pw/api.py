@@ -59,7 +59,7 @@ def download_model(model_dir):
 
 class G2PWConverter:
     def __init__(self, model_dir='G2PWModel/', style='bopomofo', model_source=None, num_workers=None, batch_size=None,
-                 turnoff_tqdm=True, enable_non_tradional_chinese=False):
+                 turnoff_tqdm=True, enable_non_tradional_chinese=False, use_cuda=False):
         if not os.path.exists(os.path.join(model_dir, 'version')):
             download_model(model_dir)
 
@@ -67,8 +67,13 @@ class G2PWConverter:
         sess_options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         sess_options.execution_mode = onnxruntime.ExecutionMode.ORT_SEQUENTIAL
         sess_options.intra_op_num_threads = 2
-        self.session_g2pw =  onnxruntime.InferenceSession(os.path.join(model_dir, 'g2pw.onnx'), sess_options=sess_options)
         
+        onnx_path = os.path.join(model_dir, 'g2pw.onnx')
+        if use_cuda:
+            self.session_g2pw =  onnxruntime.InferenceSession(onnx_path, sess_options=sess_options, providers=['CUDAExecutionProvider'])
+        else:
+            self.session_g2pw =  onnxruntime.InferenceSession(onnx_path, sess_options=sess_options)
+
         self.config = load_config(os.path.join(model_dir, 'config.py'), use_default=True)
 
         self.num_workers = num_workers if num_workers else self.config.num_workers
