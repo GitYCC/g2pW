@@ -3,6 +3,7 @@ sys.path.insert(0, './')
 
 import os
 import argparse
+import inspect
 
 import torch
 from torch.utils.data import DataLoader
@@ -11,6 +12,16 @@ from transformers import BertTokenizer
 from g2pw.module import G2PW
 from g2pw.dataset import TextDataset, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
+
+
+class G2PWForExport(torch.nn.Module):
+    # expose only the six tensor inputs; newer torch also exports defaulted args such as `eps`
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids):
+        return self.model(input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids)
 
 
 def convert_to_onnx(model_dir, save_onnx_path):
@@ -61,17 +72,18 @@ def convert_to_onnx(model_dir, save_onnx_path):
     dummy_inputs = tuple([data[name] for name in input_names])
 
     torch.onnx.export(
-        model,
+        G2PWForExport(model),
         dummy_inputs,
         save_onnx_path,
         export_params=True,
-        opset_version=12,
+        opset_version=14,
         do_constant_folding=True,
         input_names=input_names,
         output_names=['probs'],
         dynamic_axes={'input_ids': [0,1], 'token_type_ids': [0,1], 'attention_mask': [0,1], 
                       'phoneme_mask':[0], 'char_ids': [0], 'position_ids': [0], 'probs': [0]}, 
-        verbose=True
+        verbose=True,
+        **({'dynamo': False} if 'dynamo' in inspect.signature(torch.onnx.export).parameters else {})  # torch>=2.9 defaults to dynamo
     )
 
 
