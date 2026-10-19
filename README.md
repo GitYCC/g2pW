@@ -89,8 +89,8 @@ $ python scripts/predict_g2p_bert.py \
 
 ## Checkpoints
 
-- [G2PWModel-v2.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2.zip)
-- [G2PWModel-v2-onnx.zip](https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2-onnx.zip)
+- [G2PWModel-v2.zip](https://huggingface.co/YC-Chen/g2pW/resolve/main/G2PWModel-v2.zip)
+- [G2PWModel-v2-onnx.zip](https://huggingface.co/YC-Chen/g2pW/resolve/main/G2PWModel-v2-onnx.zip)
 
 ## Citation
 
