@@ -112,6 +112,15 @@ class G2PW(BertPreTrainedModel):
         if self.use_pos and self.param_pos['pos_joint_training']:
             self.pos_classifier = nn.Linear(self.config.hidden_size, self.num_pos_tags)
 
+        if hasattr(self, 'post_init'):  # required by transformers>=5
+            self.post_init()
+
+    def load_state_dict(self, state_dict, *args, **kwargs):
+        # newer transformers no longer saves `position_ids` as a persistent buffer
+        if 'bert.embeddings.position_ids' not in self.state_dict():
+            state_dict = {k: v for k, v in state_dict.items() if k != 'bert.embeddings.position_ids'}
+        return super().load_state_dict(state_dict, *args, **kwargs)
+
     def _weighted_softmax(self, logits, weights, eps):
         max_logits, _ = torch.max(logits, dim=-1, keepdim=True)
         weighted_exp_logits = torch.exp(logits - max_logits) * weights

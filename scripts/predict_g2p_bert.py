@@ -14,7 +14,33 @@ from tqdm import tqdm
 from g2pw.dataset import prepare_data, TextDataset, get_phoneme_labels, get_char_phoneme_labels, ANCHOR_CHAR
 from g2pw.module import G2PW
 from g2pw.utils import load_config
-from g2pw.api import predict
+
+
+def predict(model, dataloader, device, labels, turnoff_tqdm=False):
+    model.eval()
+
+    all_preds = []
+    all_confidences = []
+    with torch.no_grad():
+        generator = dataloader if turnoff_tqdm else tqdm(dataloader, desc='predict')
+        for data in generator:
+            input_ids, token_type_ids, attention_mask, phoneme_mask, char_ids, position_ids = \
+                [data[name].to(device) for name in ('input_ids', 'token_type_ids', 'attention_mask', 'phoneme_mask', 'char_ids', 'position_ids')]
+
+            probs = model(
+                input_ids=input_ids,
+                token_type_ids=token_type_ids,
+                attention_mask=attention_mask,
+                phoneme_mask=phoneme_mask,
+                char_ids=char_ids,
+                position_ids=position_ids
+            )
+
+            max_probs, preds = map(lambda x: x.cpu().tolist(), probs.max(dim=-1))
+            all_preds += [labels[pred] for pred in preds]
+            all_confidences += max_probs
+
+    return all_preds, all_confidences
 
 
 def main(config, checkpoint, sent_path, output_path=None):

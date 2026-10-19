@@ -14,7 +14,7 @@ import numpy as np
 from g2pw.dataset import TextDataset, get_phoneme_labels, get_char_phoneme_labels
 from g2pw.utils import load_config
 
-MODEL_URL = 'https://storage.googleapis.com/esun-ai/g2pW/G2PWModel-v2-onnx.zip'
+MODEL_URL = 'https://huggingface.co/YC-Chen/g2pW/resolve/main/G2PWModel-v2-onnx.zip'
 
 
 def predict(onnx_session, dataloader, labels, turnoff_tqdm=False):
